@@ -6,7 +6,6 @@
 !*.yaml
 !.gitignore
 !*.md
-!.travis.yml
 !lovelace/
 !lovelace/**
 !www/
@@ -14,6 +13,9 @@
 !packages/
 !packages/**
 !esphome
+!image
+!image/**
+!*.png
 
 # Ignore folders.
 .storage
