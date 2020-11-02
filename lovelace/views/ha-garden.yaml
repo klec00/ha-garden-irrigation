@@ -1,0 +1,979 @@
+#================================
+#=== GARDEN
+#=== adopted from https://github.com/kloggy/Home-Assistant
+#================================
+title: Garden
+icon: mdi:flower
+cards:
+
+  #==========================
+  #=== WEATHER
+  #==========================
+  - type: vertical-stack
+    cards:
+
+    - type: weather-forecast
+      entity: weather.smhi_home
+
+    #=== Temperature, Rainfall and Evapotranspiration
+    - type: vertical-stack
+      cards:
+      - type: horizontal-stack
+        cards:
+          - type: custom:mini-graph-card
+            entities:
+              - sensor.calculated_temperature
+            name: Temp
+            line_color: '#e74c3c'
+            line_width: 8
+            font_size: 75
+            icon: mdi:thermometer
+            hours_to_show: 24
+            hour24: true
+          - type: custom:mini-graph-card
+            entities:
+              - sensor.calculated_rain
+            name: Nederbörd
+            line_color: blue
+            line_width: 8
+            font_size: 75
+            icon: mdi:weather-rainy
+            hours_to_show: 24
+            hour24: true
+          - type: custom:mini-graph-card
+            entities:
+              - sensor.calculated_pressure
+            name: Lufttryck
+            line_color: '#04B431'
+            line_width: 8
+            font_size: 75
+            icon: mdi:arrow-collapse-down
+            hours_to_show: 24
+            hour24: true
+
+      - type: horizontal-stack
+        cards:
+          - type: custom:mini-graph-card
+            entities:
+              - sensor.calculated_wind_speed_mps
+            name: Vind
+            line_color: '#A4A4A4'
+            line_width: 8
+            font_size: 75
+            icon: mdi:weather-windy
+            hours_to_show: 24
+            hour24: true
+          - type: custom:mini-graph-card
+            entities:
+              - sensor.smart_irrigation_base_hourly_evapotranspiration
+            name: Avdunstning
+            line_color: '#DBA901'
+            line_width: 8
+            font_size: 75
+            icon: mdi:weather-hazy
+            hours_to_show: 24
+            hour24: true
+          - type: custom:mini-graph-card
+            entities:
+              - sensor.calculated_humidity
+            name: Luftfuktighet
+            line_color: '#A9A9F5'
+            line_width: 8
+            font_size: 75
+            icon: mdi:water-percent
+            hours_to_show: 24
+            hour24: true
+
+    - type: entities
+      title: Weather History
+      show_header_toggle: false
+      entities:
+        - type: custom:multiple-entity-row
+          entity: sensor.temp_minus0
+          name: Temp
+          show_state: false
+          entities:
+            - entity: sensor.temp_minus0 
+              name: idag
+              unit: false
+            - entity: sensor.temp_minus1
+              name: igår
+              unit: false
+            - entity: sensor.temp_minus2 
+              name: förrgår
+              unit: false
+
+        - type: custom:multiple-entity-row
+          entity: sensor.rain_minus0
+          name: Regn
+          show_state: false
+          entities:
+            - entity: sensor.rain_minus0 
+              name: false
+              unit: false
+            - entity: sensor.rain_minus1
+              name: false
+              unit: false
+            - entity: sensor.rain_minus2 
+              name: false
+              unit: false
+
+        - type: custom:multiple-entity-row
+          entity: sensor.evapotranspiration_last_24h
+          name: Avdunst.
+          show_state: false
+          entities:
+            - entity: sensor.evapotranspiration_minus1
+              name: false
+              unit: false
+            - entity: sensor.evapotranspiration_minus2
+              name: false
+              unit: false
+            - entity: sensor.evapotranspiration_minus3
+              name: false
+              unit: false
+
+
+            
+
+  #==========================
+  #=== IRRIGATION
+  #==========================            
+  - type: vertical-stack
+    cards:
+      - type: picture-entity
+        entity: input_boolean.irrigation_master_control_switch
+        image: /local/images/lawn-sprinkler.jpg
+        tap_action: 
+          action: toggle
+
+      - type: conditional
+        conditions:
+          - entity: input_boolean.irrigation_master_control_switch
+            state: 'on'
+        card:
+          type: vertical-stack
+          cards:
+            - type: vertical-stack
+              cards:                
+                - type: horizontal-stack
+                  cards:
+                  - type: custom:button-card
+                    icon: mdi:play-circle-outline
+                    name: 'Morning Cycle'
+                    size: 100%
+                    entity: input_boolean.cycle1_manual_run
+                    lock: 
+                      enabled: true
+                    tap_action:
+                      action: toggle
+                    styles:
+                      lock:
+                        - color: red
+                      icon:
+                        - width: 35px
+                    state:
+                      - value: 'off'
+                        icon: mdi:play-circle-outline
+                      - value: 'on'
+                        color: green
+                        icon: mdi:fountain
+
+                  - type: custom:button-card
+                    icon: mdi:play-circle-outline
+                    name: 'Afternoon Cycle'
+                    size: 100%
+                    entity: input_boolean.cycle2_manual_run
+                    lock: 
+                      enabled: true
+                    tap_action:
+                      action: toggle
+                    styles:
+                      lock:
+                        - color: red
+                      icon:
+                        - width: 35px
+                    state:
+                      - value: 'off'
+                        icon: mdi:play-circle-outline
+
+                      - value: 'on'
+                        color: green
+                        icon: mdi:fountain
+                - type: entities
+                #   title: Morning Cycle
+                  show_header_toggle: false
+                  entities:
+                    - sensor.cycle_running
+                    - entity: sensor.cycle_zone_being_watered
+                      icon: mdi:fountain
+                    - timer.cycle_zone_duration
+
+            #-----------------------
+            #--- Valve information
+            #-----------------------
+            - type: custom:config-template-card
+              entities:
+                - switch.zone1_valve
+                - switch.zone2_valve
+                - switch.zone3_valve
+                - switch.zone4_valve
+                - switch.zone5_valve
+                - switch.zone6_valve
+                - switch.zone7_valve
+                - switch.zone8_valve
+                - sensor.zone1to4_valve
+                - sensor.zone5to8_valve
+              variables:
+                - states['sensor.zone1to4_valve'].state
+                - states['sensor.zone5to8_valve'].state
+              card:
+                type: 'custom:hui-glance-card'
+                entities:
+                  - entity: switch.zone1_valve
+                    name: Blommor
+                    icon: mdi:sprinkler-variant
+                  - entity: switch.zone2_valve
+                    name: Spridare
+                    icon: mdi:sprinkler-variant
+                  - entity: switch.zone3_valve
+                    name: oanvänd
+                    icon: mdi:sprinkler-variant
+                  - entity: switch.zone4_valve
+                    name: Odling
+                    icon: mdi:sprinkler-variant
+                  - entity: switch.zone5_valve
+                    name: Sprinkler
+                    icon: mdi:sprinkler-variant
+                  - entity: switch.zone6_valve
+                    name: Green
+                    icon: mdi:sprinkler-variant
+                  - entity: switch.zone7_valve
+                    name: Tee
+                    icon: mdi:sprinkler-variant
+                  - entity: switch.zone8_valve
+                    name: ' '
+                    icon: mdi:blank
+                    show_state: false
+                  - entity: sensor.zone1to4_valve
+                    name: Wifi 1
+                    icon: "${vars[0] >= -40 ? 'mdi:wifi' : vars[0] >= -65 ? 'mdi:wifi-strength-3' : vars[0] >= -85 ? 'mdi:wifi-strength-2' : vars[0] > -90 ? 'mdi:wifi-strength-1' : 'mdi:wifi-off' }"
+                  - entity: sensor.zone5to8_valve
+                    name: Wifi 2
+                    icon: "${vars[0] >= -40 ? 'mdi:wifi' : vars[0] >= -65 ? 'mdi:wifi-strength-3' : vars[0] >= -85 ? 'mdi:wifi-strength-2' : vars[0] > -90 ? 'mdi:wifi-strength-1' : 'mdi:wifi-off' }"
+
+            #-------------------
+            #--- Morning Cycle
+            #-------------------
+            - type: entities
+              title: Cycle settings
+              show_header_toggle: false
+              entities:
+
+                #=== Morning Schedule details
+                - type: custom:fold-entity-row
+                  head: 
+                    type: custom:restriction-card
+                    row: true
+                    card: 
+                      entity: input_boolean.cycle1_enable
+                      name: Morning Cycle
+                    style: |
+                      :host {
+                        --restriction-regular-lock-color: red;
+                      }
+                  entities:
+                    - entity: sensor.cycle1_next_run_time
+                      icon: mdi:clock-start
+                    - input_select.cycle1_schedule_time
+                    - input_select.cycle1_watering_days
+                    - type: divider
+                      style:
+                        height: 10px
+
+                    - type: custom:fold-entity-row
+                      head: 
+                        type: section
+                        label: Zone cycle settings
+                      entities:
+                        - entity: input_boolean.cycle1_zone1_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone1_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle1_zone1_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle1_zone1_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+                        - entity: input_boolean.cycle1_zone2_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone2_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle1_zone2_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle1_zone2_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle1_zone3_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone3_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle1_zone3_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle1_zone3_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle1_zone4_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone4_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle1_zone4_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle1_zone4_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle1_zone5_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone5_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle1_zone5_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle1_zone5_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle1_zone6_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone6_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle1_zone6_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle1_zone6_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle1_zone7_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone7_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle1_zone7_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle1_zone7_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+         
+                - type: divider
+
+                #=== Afternoon Schedule details
+                - type: custom:fold-entity-row
+                  head: 
+                    type: custom:restriction-card
+                    row: true
+                    card: 
+                      entity: input_boolean.cycle2_enable
+                      name: Afternoon Cycle
+                    style: |
+                      :host {
+                        --restriction-regular-lock-color: red;
+                      }
+                  entities:
+                    - entity: sensor.cycle2_next_run_time
+                      icon: mdi:clock-start
+                    - input_select.cycle2_schedule_time
+                    - input_select.cycle2_watering_days
+                    - type: divider
+                      style:
+                        height: 10px
+
+                    - type: custom:fold-entity-row
+                      head: 
+                        type: section
+                        label: Zone cycle settings
+                      entities:
+                        - entity: input_boolean.cycle2_zone1_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone1_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle2_zone1_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle2_zone1_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+                        - entity: input_boolean.cycle2_zone2_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone2_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle2_zone2_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle2_zone2_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle2_zone3_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone3_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle2_zone3_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle2_zone3_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle2_zone4_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone4_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle2_zone4_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle2_zone4_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle2_zone5_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone5_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle2_zone5_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle2_zone5_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle2_zone6_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone6_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle2_zone6_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle2_zone6_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+
+                        - entity: input_boolean.cycle2_zone7_irrigation
+                          type: custom:multiple-entity-row
+                          name: false
+                          toggle: true
+                          secondary_info:
+                            entity: input_text.zone7_description
+                            name: false
+                          entities:
+                            - entity: sensor.cycle2_zone7_irrigation_duration
+                              name: false
+                            - entity: input_boolean.cycle2_zone7_automatically_adjust_time
+                              name: false
+                              icon:  mdi:scale
+                              state_color: true
+                              tap_action:
+                                action: toggle
+  
+            #=== Irrigation History
+            - type: entities
+              title: Irrigation History
+              show_header_toggle: false
+              entities:
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: sensor.last_irrigated_time
+                    icon: mdi:update
+                  entities:
+                    - entity: sensor.zone1_time_today
+                      type: custom:multiple-entity-row
+                      name: false
+                      toggle: false
+                      icon: mdi:water
+                      secondary_info:
+                        entity: input_text.zone1_description
+                        name: false
+
+                    - entity: sensor.zone2_time_today
+                      type: custom:multiple-entity-row
+                      name: false
+                      toggle: false
+                      icon: mdi:water
+                      secondary_info:
+                        entity: input_text.zone2_description
+                        name: false
+                    - entity: sensor.zone3_time_today
+                      type: custom:multiple-entity-row
+                      name: false
+                      toggle: false
+                      icon: mdi:water
+                      secondary_info:
+                        entity: input_text.zone3_description
+                        name: false
+                    - entity: sensor.zone4_time_today
+                      type: custom:multiple-entity-row
+                      name: false
+                      toggle: false
+                      icon: mdi:water
+                      secondary_info:
+                        entity: input_text.zone4_description
+                        name: false
+                    - entity: sensor.zone5_time_today
+                      type: custom:multiple-entity-row
+                      name: false
+                      toggle: false
+                      icon: mdi:water
+                      secondary_info:
+                        entity: input_text.zone5_description
+                        name: false
+                    - entity: sensor.zone6_time_today
+                      type: custom:multiple-entity-row
+                      name: false
+                      toggle: false
+                      icon: mdi:water
+                      secondary_info:
+                        entity: input_text.zone6_description
+                        name: false
+                    - entity: sensor.zone7_time_today
+                      type: custom:multiple-entity-row
+                      name: false
+                      toggle: false
+                      icon: mdi:water
+                      secondary_info:
+                        entity: input_text.zone7_description
+                        name: false
+
+  #==========================
+  #=== ZONE SETTINGS
+  #==========================  
+  - type: conditional
+    conditions:
+      - entity: input_boolean.irrigation_master_control_switch
+        state: 'on'
+    card:
+      type: vertical-stack
+      cards:
+        - type: custom:bar-card
+          title: Zone Water Buckets
+          direction: up
+          stack: horizontal
+          min: -30
+          max: 30
+          height: 80px
+          positions:
+            name: outside
+            indicator: off
+          decimal: 1
+          unit_of_measurement: ' '
+          target: 0.1
+          severity:
+            - color: '#FACC2E'
+              from: -100
+              to: -2
+            - color: '#9FF781'
+              from: -1.9
+              to: +2
+            - color: '#81BEF7'
+              from: +2.1
+              to: 100
+          entities:
+            - entity: sensor.waterbucket_zone1
+              name: Zone 1
+            - entity: sensor.waterbucket_zone2
+              name: Zone 2
+            - entity: sensor.waterbucket_zone3
+              name: Zone 3
+            - entity: sensor.waterbucket_zone4
+              name: Zone 4
+            - entity: sensor.waterbucket_zone5
+              name: Zone 5
+            - entity: sensor.waterbucket_zone6
+              name: Zone 6
+            - entity: sensor.waterbucket_zone7
+              name: Zone 7
+        - type: entities
+          title: Zone Overview
+          show_header_toggle: false
+          entities:
+            - type: custom:multiple-entity-row
+              entity: sensor.waterbucket_zone1
+              name: Zone 1
+              show_state: false
+              secondary_info:
+                entity: input_text.zone1_description
+                name: false
+              entities:
+                - entity: input_number.zone1_minimum_duration 
+                  name: min
+                  unit: false
+                - entity: input_number.zone1_manual_duration
+                  name: man
+                  unit: false
+                - entity: input_number.zone1_maximum_duration 
+                  name: max
+                  unit: false
+                - entity: input_number.adjusted_zone1_duration
+                  name: adj
+                  unit: false
+                - entity: sensor.cycle1_zone1_irrigation
+                  name: MC
+                  icon: true
+                - entity: sensor.cycle2_zone1_irrigation
+                  name: AC
+                  icon: true
+            - type: custom:multiple-entity-row
+              entity: sensor.waterbucket_zone2
+              name: Zone 2
+              show_state: false
+              secondary_info:
+                entity: input_text.zone2_description
+                name: false
+              entities:
+                - entity: input_number.zone2_minimum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.zone2_manual_duration
+                  name: false
+                  unit: false
+                - entity: input_number.zone2_maximum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.adjusted_zone2_duration
+                  name: false
+                  unit: false
+                - entity: sensor.cycle1_zone2_irrigation
+                  name: false
+                  icon: true
+                - entity: sensor.cycle2_zone2_irrigation
+                  name: false
+                  icon: true
+
+            - type: custom:multiple-entity-row
+              entity: sensor.waterbucket_zone3
+              name: Zone 3
+              show_state: false
+              secondary_info:
+                entity: input_text.zone3_description
+                name: false
+              entities:
+                - entity: input_number.zone3_minimum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.zone3_manual_duration
+                  name: false
+                  unit: false
+                - entity: input_number.zone3_maximum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.adjusted_zone3_duration
+                  name: false
+                  unit: false
+                - entity: sensor.cycle1_zone3_irrigation
+                  name: false
+                  icon: true
+                - entity: sensor.cycle2_zone3_irrigation
+                  name: false
+                  icon: true    
+                  
+            - type: custom:multiple-entity-row
+              entity: sensor.waterbucket_zone4
+              name: Zone 4
+              show_state: false
+              secondary_info:
+                entity: input_text.zone4_description
+                name: false
+              entities:
+                - entity: input_number.zone4_minimum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.zone4_manual_duration
+                  name: false
+                  unit: false
+                - entity: input_number.zone4_maximum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.adjusted_zone4_duration
+                  name: false
+                  unit: false
+                - entity: sensor.cycle1_zone4_irrigation
+                  name: false
+                  icon: true
+                - entity: sensor.cycle2_zone4_irrigation
+                  name: false
+                  icon: true
+            - type: custom:multiple-entity-row
+              entity: sensor.waterbucket_zone5
+              name: Zone 5
+              show_state: false
+              secondary_info:
+                entity: input_text.zone5_description
+                name: false
+              entities:
+                - entity: input_number.zone5_minimum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.zone5_manual_duration
+                  name: false
+                  unit: false
+                - entity: input_number.zone5_maximum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.adjusted_zone5_duration
+                  name: false
+                  unit: false
+                - entity: sensor.cycle1_zone5_irrigation
+                  name: false
+                  icon: true
+                - entity: sensor.cycle2_zone5_irrigation
+                  name: false
+                  icon: true
+
+            - type: custom:multiple-entity-row
+              entity: sensor.waterbucket_zone6
+              name: Zone 6
+              show_state: false
+              secondary_info:
+                entity: input_text.zone6_description
+                name: false
+              entities:
+                - entity: input_number.zone6_minimum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.zone6_manual_duration
+                  name: false
+                  unit: false
+                - entity: input_number.zone6_maximum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.adjusted_zone6_duration
+                  name: false
+                  unit: false
+                - entity: sensor.cycle1_zone6_irrigation
+                  name: false
+                  icon: true
+                - entity: sensor.cycle2_zone6_irrigation
+                  name: false
+                  icon: true
+
+            - type: custom:multiple-entity-row
+              entity: sensor.waterbucket_zone7
+              name: Zone 7
+              show_state: false
+              secondary_info:
+                entity: input_text.zone7_description
+                name: false
+              entities:
+                - entity: input_number.zone7_minimum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.zone7_manual_duration
+                  name: false
+                  unit: false
+                - entity: input_number.zone7_maximum_duration 
+                  name: false
+                  unit: false
+                - entity: input_number.adjusted_zone7_duration
+                  name: false
+                  unit: false
+                - entity: sensor.cycle1_zone7_irrigation
+                  name: false
+                  icon: true
+                - entity: sensor.cycle2_zone7_irrigation
+                  name: false
+                  icon: true
+
+            - type: custom:fold-entity-row
+              head: 
+                type: section
+                label: Zone Settings
+              entities:
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: input_text.zone1_description
+                    name: Zone 1
+                    icon: mdi:cog
+                  entities:
+                    - entity: input_number.zone1_precipitation_rate
+                      name: Precipitation
+                    - entity: input_number.zone1_manual_duration
+                      name: Manual duration
+                    - entity: input_number.zone1_minimum_duration
+                      name: Min duration
+                    - entity: input_number.zone1_maximum_duration
+                      name: Max duration
+                - type: divider
+
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: input_text.zone2_description
+                    name: Zone 2
+                    icon: mdi:cog
+                  entities:
+                    - entity: input_number.zone2_precipitation_rate
+                      name: Precipitation
+                    - entity: input_number.zone2_manual_duration
+                      name: Manual duration
+                    - entity: input_number.zone2_minimum_duration
+                      name: Min duration
+                    - entity: input_number.zone2_maximum_duration
+                      name: Max duration
+                - type: divider
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: input_text.zone3_description
+                    name: Zone 3
+                    icon: mdi:cog
+                  entities:
+                    - entity: input_number.zone3_precipitation_rate
+                      name: Precipitation
+                    - entity: input_number.zone3_manual_duration
+                      name: Manual duration
+                    - entity: input_number.zone3_minimum_duration
+                      name: Min duration
+                    - entity: input_number.zone3_maximum_duration
+                      name: Max duration
+                - type: divider
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: input_text.zone4_description
+                    name: Zone 4
+                    icon: mdi:cog
+                  entities:
+                    - entity: input_number.zone4_precipitation_rate
+                      name: Precipitation
+                    - entity: input_number.zone4_manual_duration
+                      name: Manual duration
+                    - entity: input_number.zone4_minimum_duration
+                      name: Min duration
+                    - entity: input_number.zone4_maximum_duration
+                      name: Max duration
+                - type: divider
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: input_text.zone5_description
+                    name: Zone 5
+                    icon: mdi:cog
+                  entities:
+                    - entity: input_number.zone5_precipitation_rate
+                      name: Precipitation
+                    - entity: input_number.zone5_manual_duration
+                      name: Manual duration
+                    - entity: input_number.zone5_minimum_duration
+                      name: Min duration
+                    - entity: input_number.zone5_maximum_duration
+                      name: Max duration
+                - type: divider
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: input_text.zone6_description
+                    name: Zone 6
+                    icon: mdi:cog
+                  entities:
+                    - entity: input_number.zone6_precipitation_rate
+                      name: Precipitation
+                    - entity: input_number.zone6_manual_duration
+                      name: Manual duration
+                    - entity: input_number.zone6_minimum_duration
+                      name: Min duration
+                    - entity: input_number.zone6_maximum_duration
+                      name: Max duration
+                - type: divider
+                - type: custom:fold-entity-row
+                  head: 
+                    entity: input_text.zone7_description
+                    name: Zone 7
+                    icon: mdi:cog
+                  entities:
+                    - entity: input_number.zone7_precipitation_rate
+                      name: Precipitation
+                    - entity: input_number.zone7_manual_duration
+                      name: Manual duration
+                    - entity: input_number.zone7_minimum_duration
+                      name: Min duration
+                    - entity: input_number.zone7_maximum_duration
+                      name: Max duration

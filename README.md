@@ -1,4 +1,4 @@
-# Weather setup in Home-Assistant
+# Weather based Smart Irrigation setup in Home Assistant
 __Adopted from kloggy's excellent work on [HA Irrigation](https://github.com/kloggy/HA-Irrigation-Version1).__
 
 *Note: I make use of HA Irrigation version 1, since that was the version I started with, and with the adoptions I've made it fits my needs so I will not change to version 2 for now.*
@@ -14,6 +14,8 @@ __Adopted from kloggy's excellent work on [HA Irrigation](https://github.com/klo
 
 In short, the system consists of a set of irrigation Zones that can be individually controlled. The irrigation is done using run Cycles, one in the morning and one in the afternoon. The irrigation duration per Zone can be controlled either by a manually specified time, or by an automatic calculation that takes weather conditions into consideration. The latter part is the biggest change I've made compared to the original HA-Irrigation implementation.
 
+For Weather Data collection, please see my [Weather Setup in Home Assistant](https://github.com/klec00/ha-weather)
+
 <img src="./image/Master_control.png" width="400"/>
 
 *Note: screeshot captured during autumn when system was turned off, therefore zone valves indicate unavailable :-)*
@@ -25,7 +27,7 @@ In total I have three zones for the lawn; backside, front, and the green itself.
 The base of my Home Assistant solution is the HA Irrigation project by kloggy. I have however adopted it to suit my needs, and I realised I need to document it before I forget how it works (in case I need to fix something).
 
 ### Zone setup
-Each Zone is defined in a set of input_number helpers. The input_numbers are then templated to individual sensor for better apperance in the user interface.
+Each Zone is defined in a set of `input_number` helpers. The input_numbers are then templated to individual sensor for better apperance in the user interface.
 
 <img src="./image/Zone_overview.png" width="400"/>
 
@@ -85,7 +87,7 @@ The size of the solenoids will decide the water flow. I found that the 1/2" vers
 
 ### Irrigation
 - 3x Gardena S80 sprinklers
-- 4x Simple overground inpulse rotating garden sprinklers
+- 4x Simple overground impulse rotating garden sprinklers
 - 4x Gardena microdrip systems for plant and flower irrigation
 - 4x 12V DC copper solenoid valve 1/2"
 - 3x 12V DC copper solenoid valve 3/4"
@@ -97,17 +99,8 @@ The size of the solenoids will decide the water flow. I found that the 1/2" vers
 - 1x Waterproof junction box IP67 
 
 #### esphome
+Flashing the Sonoff's was done using the instructions from [how-to-install-esphome-on-sonoff-4ch-pro-r2](https://reid-projects.com/how-to-install-esphome-on-sonoff-4ch-pro-r2/). 
+
 The esphome program has a built in failsafe mechanism which I borrowed from the thread [ESPHOME create a PulseTime like tasmota](https://community.home-assistant.io/t/esphome-create-a-pulsetime-like-tasmota/185274) on the Home Assistant community forum. The failsafe has a hardcoded setting at boot, and is then set before activating a valve by Home Assistant from `input_number.irrigation_failsafe_delay`.
 
 The program also has an interlock defined so that only one valve can operate at a time. This does however only work within the Sonoff device itself. I have two Sonoff controllers so in addition to the controller based failsafe, an additional control is implemented in Home Assistant to ensure only one valve is activated at a time.
-
-
-*todo:*
-- delete bucket_today
-- ta bort todays_evapotranspiration_forecast
-- ta bort evapotranspiration_minus0?
-- ta bort calculate_hourly_evapo
-- ta bort input_number.evapotranspiration_hourly
-- tq bort evapotranspiration_last_24h
-- ta bort auto:- alias: Irrigation Weather Update weather conditions every hour
-- ta bort auto: - alias: Irrigation Weather Data - Collect new and cycle historic weather data

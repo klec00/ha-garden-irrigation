@@ -1,0 +1,261 @@
+#=================
+# === Automations
+#=================
+automation:
+  #============================================================
+  #=== Recalculate irrigation time when Automatic Zone adjustment
+  #=== is turned on
+  #============================================================
+  - alias: Irrigation Weather - Recalculate irrigation time when automatic toggle turned on
+    trigger:
+      - platform: state
+        entity_id:
+          - input_boolean.zone1_automatically_adjust_time
+          - input_boolean.zone2_automatically_adjust_time
+          - input_boolean.zone3_automatically_adjust_time
+          - input_boolean.zone4_automatically_adjust_time
+          - input_boolean.zone5_automatically_adjust_time
+          - input_boolean.zone6_automatically_adjust_time
+          - input_boolean.zone7_automatically_adjust_time
+        to: "on"
+
+    action:
+      - service: script.calculate_adjusted_zone_duration
+        data_template:
+          zone: >
+            {% set zone = trigger.entity_id.split('.zone')[1][0] %}
+            {{ zone }}
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+  #============================================================
+  #=== Recalculate average weather conditions every 30 minutes
+  #=== And recalculate Cycle durations
+  #============================================================
+  - alias: Irrigation Weather - Update average weather conditions every 30 mins
+    trigger:
+      - platform: time_pattern
+        minutes: "/30"
+    #        seconds: 00
+    action:
+      - service: script.calculate_average_weather_conditions
+      - wait_template: "{{ is_state('script.calculate_average_weather_conditions', 'off') }}"
+
+      # Recalculate zone durations
+      - service: script.recalculate_zone_durations
+      - wait_template: "{{ is_state('script.recalculate_zone_durations', 'off') }}"
+
+
+  # todo: uppdatera temp_minus1 och rain_minus1 om nytt data har kommit
+  # todo: uppdatera temp_minus0 och rain_minus0 under dagen
+
+  #============================================================
+  #=== Recalculate weather conditions every day (always)
+  #============================================================
+  - alias: Irrigation Weather Update weather conditions every day
+    trigger:
+      - platform: time
+        at: "00:00:30"
+
+    action:
+      - service: script.calculate_daily_weather_conditions
+
+      # Cycle the temperature figures
+      - service: script.cycle_garden_temperature_data
+
+      # Cycle the rainfall figures
+      - service: script.cycle_garden_rainfall_data
+
+      # Cycle the evatranspiration figures
+      - service: script.garden_evapotranspiration_data
+
+#============
+#=== Scripts
+#============
+script:
+
+  #=========================================
+  #=== Calculate daily weather conditions
+  #=========================================
+  calculate_daily_weather_conditions:
+    sequence:
+      # Save estimated rain as used for Evapotranspiration calculation (to later adjust when actual data arrives)
+      - service: input_number.set_value
+        data_template:
+          entity_id: input_number.smart_irrigation_eod_estimated_rain
+          value: >
+            {{ float(states('sensor.smart_irrigation_base_hourly_net_precipitation')) }}
+
+      # Calculate daily water bucker
+      - service: smart_irrigation.smart_irrigation_base_calculate_daily_adjusted_run_time
+      #    - wait_template: "{{ is_state('script.smart_irrigation_base_calculate_daily_adjusted_run_time', 'off') }}"
+
+      # Save calculated water bucket as daily calculated evapotranspiration
+      - service: input_number.set_value
+        data_template:
+          entity_id: input_number.evapotranspiration_daily
+          value: >
+            {{ float(states('sensor.smart_irrigation_base_water_bucket')) }}
+
+      # Reset SmartIrrigation to zero (since we are not using it for other than getting a daily water bucket/evapotranspiration)
+      - service: smart_irrigation.smart_irrigation_base_reset_bucket
+      #    - wait_template: "{{ is_state('script.smart_irrigation.smart_irrigation_base_reset_bucket', 'off') }}"
+
+      - service: script.set_waterbucket
+        data_template:
+          zone: "1"
+          adjustment: "{{ float(states('input_number.evapotranspiration_daily')) }}"
+      - wait_template: "{{ is_state('script.set_waterbucket', 'off') }}"
+
+      - service: script.set_waterbucket
+        data_template:
+          zone: "2"
+          adjustment: "{{ float(states('input_number.evapotranspiration_daily')) }}"
+      - wait_template: "{{ is_state('script.set_waterbucket', 'off') }}"
+
+      - service: script.set_waterbucket
+        data_template:
+          zone: "3"
+          adjustment: "{{ float(states('input_number.evapotranspiration_daily')) }}"
+      - wait_template: "{{ is_state('script.set_waterbucket', 'off') }}"
+
+      - service: script.set_waterbucket
+        data_template:
+          zone: "4"
+          adjustment: "{{ float(states('input_number.evapotranspiration_daily')) }}"
+      - wait_template: "{{ is_state('script.set_waterbucket', 'off') }}"
+
+      - service: script.set_waterbucket
+        data_template:
+          zone: "5"
+          adjustment: "{{ float(states('input_number.evapotranspiration_daily')) }}"
+      - wait_template: "{{ is_state('script.set_waterbucket', 'off') }}"
+
+      - service: script.set_waterbucket
+        data_template:
+          zone: "6"
+          adjustment: "{{ float(states('input_number.evapotranspiration_daily')) }}"
+      - wait_template: "{{ is_state('script.set_waterbucket', 'off') }}"
+
+      - service: script.set_waterbucket
+        data_template:
+          zone: "7"
+          adjustment: "{{ float(states('input_number.evapotranspiration_daily')) }}"
+      - wait_template: "{{ is_state('script.set_waterbucket', 'off') }}"
+
+  #=========================================
+  #=== Set waterbucket for Zone
+  #=== is passed:
+  #===   {{ cycle }}
+  #===   {{ adjustment }}
+  #=========================================
+  set_waterbucket:
+    sequence:
+      - service: input_number.set_value
+        data_template:
+          entity_id: input_number.waterbucket_zone{{ zone }}
+          value: >
+            {% set adj = float(states('input_number.waterbucket_zone' + zone)) +
+                         (adjustment | float) %}
+            {{ adj }}
+
+  #=========================================
+  #=== Calculate average weather conditions
+  #=========================================
+  calculate_average_weather_conditions:
+    sequence:
+      # Set today's forecast high temperature
+      # but only if it has gone up
+      # temp_minus0 is reset every morning at 06:30 in the automation that
+      # cycles the weather information
+
+      #              {{ states('sensor.calculated_max_temp_now') }}
+      - service: input_number.set_value
+        data_template:
+          entity_id: input_number.temp_minus0
+          value: >
+            {% if float(states('input_number.temp_minus0')) < 
+                  float(states('sensor.smhi_home_avg_temp_forecast')) %}
+              {{ states('sensor.smhi_home_avg_temp_forecast') }}
+            {% else %}
+              {{ states('input_number.temp_minus0') }}
+            {% endif %}
+
+      - service: input_number.set_value
+        data_template:
+          entity_id: input_number.evapotranspiration_hourly
+          value: >
+              {{ states('sensor.smart_irrigation_base_hourly_evapotranspiration') }}
+
+
+  #=========================================
+  #=== Recalculate zone durations
+  #=========================================
+  recalculate_zone_durations:
+    sequence:
+      - service: script.calculate_adjusted_zone_duration
+        data:
+          zone: "1"
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+      - service: script.calculate_adjusted_zone_duration
+        data:
+          zone: "2"
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+      - service: script.calculate_adjusted_zone_duration
+        data:
+          zone: "3"
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+      - service: script.calculate_adjusted_zone_duration
+        data:
+          zone: "4"
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+      - service: script.calculate_adjusted_zone_duration
+        data:
+          zone: "5"
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+      - service: script.calculate_adjusted_zone_duration
+        data:
+          zone: "6"
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+      - service: script.calculate_adjusted_zone_duration
+        data:
+          zone: "7"
+      - wait_template: "{{ is_state('script.calculate_adjusted_zone_duration', 'off') }}"
+
+  #========================================================
+  #=== Adjust zone duration for weather conditions
+  #=== is passed:
+  #===   {{ zone }}
+  #========================================================
+  calculate_adjusted_zone_duration:
+    sequence:
+      # Adjust for evapotranspiration and rain forecast
+      #  (adjust cycle)
+      #   beräkna behov = WBz + regn forecast + 1/2 regn forecast imorgon (SMHI?) - tid vi kört idag redan (manuellt)
+      #   omsätt WBz i TIDz :> Vet WB, vet flöde per timme (mm/h) = WBz / input_number.zone1_precipitation_rate X 60 (tid att köra i minuter)
+      #   om TIDz > MinTIDz så vattnar vi i MAX(TIDz, MaxTIDz) = ActualTIDz
+
+      - service: input_number.set_value
+        data_template:
+          entity_id: input_number.adjusted_zone{{ zone }}_duration
+          value: >
+            {% set waterbucket = float(states('input_number.waterbucket_zone'+zone)) %}
+            {% set rain = float(states('sensor.calculated_max_rain_today')) * 0.8 %}
+            {% set irrigation_today_mins = float(states('sensor.zone' + zone + '_time_today')) %}
+            {% set irrigation_time = - ((waterbucket + rain) / 
+                                       float(states('input_number.zone' + zone + '_precipitation_rate')) 
+                                       * 60 ) 
+                                     - irrigation_today_mins %}
+            {% if irrigation_time < float(states('input_number.zone' + zone + '_minimum_duration')) %}
+              {{ 0 }}
+            {% elif irrigation_time > float(states('input_number.zone' + zone + '_maximum_duration')) %} 
+              {{ float(states('input_number.zone' + zone + '_maximum_duration')) | round }}
+            {% else %}
+              {{ irrigation_time | round }}
+            {% endif %}
+

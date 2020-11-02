@@ -1,0 +1,159 @@
+esphome:
+  name: esp_vatten2
+  platform: ESP8266
+  board: esp01_1m
+
+wifi:
+  ssid: !secret home_wifi_ssid
+  password: !secret home_wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Esp Vatten2 Fallback Hotspot"
+    password: !secret esp_hotspot
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: !secret api_password
+
+ota:
+  password: !secret ota_password
+
+globals:
+  - id: default_failsafe
+    type: int
+    restore_value: no
+    initial_value: '600000'  # default failsafe is 10 mins
+
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "Zone 5 button"
+  - platform: gpio
+    pin:
+      number: GPIO9
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "Zone 6 button"
+  - platform: gpio
+    pin:
+      number: GPIO10
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "Zone 7 button"
+  - platform: gpio
+    pin:
+      number: GPIO14
+      mode: INPUT_PULLUP
+      inverted: True
+    name: "Zone 8 button"
+  - platform: status
+    name: "Zone 5to8 Status"
+
+switch:
+ 
+
+  - platform: gpio
+#    name: "Sonoff 4CH Relay 1"
+    name: "zone5_valve"
+    pin: GPIO12
+    id: zone5_valve
+    icon: "mdi:engine"
+    interlock: [zone6_valve, zone7_valve, zone8_valve]
+    restore_mode: ALWAYS_OFF
+  #  inverted: True
+    on_turn_on:
+      - script.execute: failsafe
+    on_turn_off:
+      - script.stop: failsafe
+
+
+  - platform: gpio
+#    name: "Sonoff 4CH Relay 2"
+    name: "zone6_valve"
+    pin: GPIO5
+    id: zone6_valve      
+    icon: "mdi:engine"
+    interlock: [zone5_valve, zone7_valve, zone8_valve]
+    restore_mode: ALWAYS_OFF
+#    inverted: True
+    on_turn_on:
+      - script.execute: failsafe
+    on_turn_off:
+      - script.stop: failsafe
+
+  - platform: gpio
+#    name: "Sonoff 4CH Relay 3"
+    name: "zone7_valve"
+    pin: GPIO4
+    id: zone7_valve      
+    icon: "mdi:engine"
+    interlock: [zone5_valve, zone6_valve, zone8_valve]
+    restore_mode: ALWAYS_OFF
+#    inverted: True
+    on_turn_on:
+      - script.execute: failsafe
+    on_turn_off:
+      - script.stop: failsafe
+
+
+  - platform: gpio
+#    name: "Sonoff 4CH Relay 4"
+    name: "zone8_valve"
+    pin: GPIO15
+    id: zone8_valve      
+    icon: "mdi:engine"
+    interlock: [zone5_valve, zone6_valve, zone7_valve]
+    restore_mode: ALWAYS_OFF
+#    inverted: True
+    on_turn_on:
+      - script.execute: failsafe
+    on_turn_off:
+      - script.stop: failsafe
+
+output:
+  # Register the blue LED as a dimmable output ....
+  - platform: esp8266_pwm
+    id: blue_led
+    pin: GPIO13
+    inverted: True
+
+light:
+  # ... and then make a light out of it.
+  - platform: monochromatic
+    name: "Zone 5to8 LED"
+    output: blue_led
+
+sensor:
+  - platform: wifi_signal
+    name: "zone5to8_valve"
+    update_interval: 60s
+    id: zone5to8_valve
+
+#The entity of input_number in HA
+  - platform: homeassistant
+    name: "Zone 5to8 failsafe time delay"
+    id: ha_delay
+    entity_id: input_number.irrigation_failsafe_delay 
+    
+script:
+  - id: failsafe
+    then:
+      - delay: !lambda |-
+          if (id(ha_delay) > 0) {
+            return id(ha_delay).state * 60000;
+          } else {
+            return id(default_failsafe);
+          }
+      - switch.turn_off: zone5_valve
+      - switch.turn_off: zone6_valve
+      - switch.turn_off: zone7_valve
+      - switch.turn_off: zone8_valve
