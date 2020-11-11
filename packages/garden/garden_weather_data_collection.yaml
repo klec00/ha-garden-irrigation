@@ -28,12 +28,6 @@ input_number:
     max: 40
     icon: mdi:thermometer
 
-#  temp_minus4:
-#    name: Temp 4 days ago
-#    min: -30
-#    max: 40
-#    icon: mdi:thermometer
-
   # Rainfall
   rain_minus0:
     name: Rain today
@@ -171,28 +165,6 @@ sensor:
         value_template: "{{ states('input_number.temp_minus3') }}"     
         unit_of_measurement: "°C"
 
-#      temp_minus4:
-#        friendly_name: Temp 4 days ago
-#        value_template: "{{ states('input_number.temp_minus4') }}"     
-#        unit_of_measurement: "°C"
-
-#      temp_high_2days:
-#        friendly_name: Avg 2 day temp
-#        value_template: "{{ states('input_number.temp_high_2days') }}"     
-#        unit_of_measurement: "°C"
-
-#      temp_high_5days:
-#        friendly_name: Avg 5 day temp
-#        value_template: "{{ states('input_number.temp_high_5days') }}"     
-#        unit_of_measurement: "°C"
-
-
-# Rainfall
-#      rain_minus0:
-#        friendly_name: Rain today
-#        value_template: "{{ states('input_number.rain_minus0') }}"     
-#        unit_of_measurement: "mm"
-
       rain_minus0:
         friendly_name: Rain today
         value_template: "{{ states('sensor.calculated_max_rain_today') }}"     
@@ -211,7 +183,9 @@ sensor:
         value_template: "{{ float(states('sensor.calculated_average_rain_yesterday')) }}"     
         unit_of_measurement: "mm"
         icon_template: >
-          {% if float(states('sensor.calculated_average_rain_yesterday')) > 10 %}
+          {% if states('sensor.calculated_average_rain_yesterday') == 'unknown' %}
+            mdi:moon-new
+          {% elif float(states('sensor.calculated_average_rain_yesterday')) > 10 %}
             mdi:weather-pouring
           {% elif float(states('sensor.calculated_average_rain_yesterday')) > 5 %}
             mdi:weather-rainy
@@ -245,11 +219,7 @@ sensor:
             mdi:weather-partly-rainy
           {% endif %}
 
-#      rain_3days_ratio:
-#        friendly_name: Last 3 days rain adj. multiplyer
-#        value_template: "{{ states('input_number.rain_3days_ratio') }}"     
-
-# Evapotranspiration
+  # Evapotranspiration
 
       evapotranspiration_minus1:
         friendly_name: Evapotranspiration yesterday
@@ -370,8 +340,6 @@ automation:
   - alias: Irrigation Weather Data - observed rain yesterday
     initial_state: on
     trigger:
-#      - platform: state
-#        entity_id: sensor.calculated_average_rain_yesterday
       - platform: time
         at: '11:30:00'
 
@@ -448,12 +416,6 @@ script:
   cycle_garden_temperature_data:
     sequence:
 
-      # Cycle the temperature figures.
-#      # Passed {{ loop_count}} which is the number relating to the highest entity
-      # e.g. input_number.temp_minus4
-
-      # Setting the temperature for today: sensor.calculated_max_temp_now
-
       - service: input_number.set_value
         data_template:
           entity_id: 'input_number.temp_minus3'
@@ -478,72 +440,12 @@ script:
           value: >
             {{ states('sensor.smhi_home_avg_temp_forecast') }} 
 
- 
-#      - service: script.calculate_evapotranspiration
-#        data_template:
-#          entity_set: 'input_number.evapotranspiration_minus1'
-#          average_temp: >
-#            {{ states('sensor.calculated_average_temp_yesterday') }}
-#      - wait_template: "{{ is_state('script.calculate_evapotranspiration', 'off') }}"
-
-
-
-
-#      - service: input_number.set_value
-#        data_template:
-#          entity_id: >
-#            input_number.temp_minus{{ loop_count }}
-#          value: >
-#            {% if loop_count | int == 0 %}
-#              {{ states('sensor.calculated_max_temp_now') | float }}
-#            {% else %}
-#              {{ states('input_number.temp_minus' ~ (loop_count | int - 1) | string) }}
-#            {% endif %}
-
-      # Stop when count is 0
-#      - condition: template
-#        value_template: >
-#          {{ loop_count | int > 0 }}
-
-      # Stop the looping script...
-#      - service: homeassistant.turn_off
-#        entity_id: script.loop_garden_temperature_data
-
-      # ...before looping
-#      - service: script.loop_garden_temperature_data
-#        data_template:
-#          loop_count: >
-#            {{ loop_count }}
-
-
-  #============================================
-  #=== Loop the script garden_temperature_data
-  #============================================
-#  loop_garden_temperature_data:
-#    sequence:
-
-      # Stop the calling script...
-#      - service: homeassistant.turn_off
-#        entity_id: script.garden_temperature_data
-
-      # ...then restart it
-#      - service: script.garden_temperature_data
-#        data_template:
-#          loop_count: >
-#            {{ loop_count | int - 1 }}
-
-
   #=================================================
   #=== Collect new and cycle historic RAINFALL data
   #=================================================
   cycle_garden_rainfall_data:
     sequence:
 
-      # Cycle the rainfall figures.
-#      # Passed {{ loop_count}} which is the number relating to the highest entity
-      # e.g. input_number.rain_minus3
-
-      # Now using sensor.smartweather_rain_yesterday ------ sensor.dark_sky_precip_intensity
       # Make todays rain zero
 
       - service: input_number.set_value
@@ -574,52 +476,7 @@ script:
           value: >
             {{ states('sensor.calculated_max_rain_today') }} 
 
-#          value: >
-#            {% if loop_count | int == 0 %}
-#              {{ states('sensor.calculated_max_rain_today') }}
-#            {% elif loop_count | int == 1 %}
-#              {{ states('sensor.calculated_average_rain_yesterday') }} 
-#            {% else %}
-#              {{ states('input_number.rain_minus' ~ (loop_count | int - 1) | string) }}
-#            {% endif %}
 
-      # # Stop when count is 0
-#      - condition: template
-#        value_template: >
-#          {{ loop_count | int > 0 }}
-
-      # Stop when count is 1 because day zero is rain today which
-      # is collected directly from the sensor.smartweather_rain_today
-      #- condition: template
-      #  value_template: >
-      #    {{ loop_count | int > 1 }}
-
-      # Stop the looping script...
-#      - service: homeassistant.turn_off
-#        entity_id: script.loop_garden_rainfall_data
-
-      # ...before looping
-#      - service: script.loop_garden_rainfall_data
-#        data_template:
-#          loop_count: >
-#            {{ loop_count }}
-
-
-  #=========================================
-  #=== Loop the script garden_rainfall_data
-  #=========================================
-#  loop_garden_rainfall_data:
-#    sequence:
-
-      # Stop the calling script...
-#      - service: homeassistant.turn_off
-#        entity_id: script.garden_rainfall_data
-
-      # ...then restart it
-#      - service: script.garden_rainfall_data
-#        data_template:
-#          loop_count: >
-#            {{ loop_count | int - 1 }}
 
   #=================================================
   #=== Collect new and cycle historic Evotranspiration data
