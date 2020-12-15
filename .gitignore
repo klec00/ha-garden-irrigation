@@ -24,12 +24,13 @@
 .google.token
 old/
 www/community/**
-
+www/videos/**
 
 # Ensure these YAML files are ignored, otherwise your secret data/credentials will leak.
 ip_bans.yaml
 secrets.yaml
 known_devices.yaml
 .*.yaml
+
 
 

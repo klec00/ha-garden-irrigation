@@ -5,7 +5,7 @@ __Adopted from kloggy's excellent work on [HA Irrigation](https://github.com/klo
 
 <img src="./image/lovelace_ui.png" width="650"/>
 
-[![ha_badge](https://img.shields.io/badge/HA_version-0.116.4-green.svg)](https://home-assistant.io)
+[![ha_badge](https://img.shields.io/badge/HA_version-0.118.5-green.svg)](https://home-assistant.io)
 
 [![Buy me a coffee][buymeacoffee-shield]][buymeacoffee]
 
